@@ -63,19 +63,26 @@ struct UserListView: View {
     
     var body: some View {
         List(users) { user in
-            VStack(alignment: .leading) {
-                Text(user.userName)
-                    .font(.headline)
-                if let userImages = images[user.id], !userImages.isEmpty {
-                    ForEach(userImages) { image in
-                        ImageView(image: image)
+            if let userImages = images[user.id], !userImages.isEmpty {
+                NavigationLink(destination: UserDetailView(user: user, userImages: userImages)) {
+                    VStack(alignment: .leading) {
+                        Text("\(user.userName)さん")
+                            .font(.headline)
+                        if let firstImage = userImages.first {
+                            ImageView(image: firstImage)
+                        }
                     }
-                } else {
-                    Text("記録情報がありません")
+                    .padding(.vertical, 5)
+                }
+            } else {
+                VStack(alignment: .leading) {
+                    Text(user.userName)
+                        .font(.headline)
+                    Text("No images available for selected date.")
                         .foregroundColor(.gray)
                 }
+                .padding(.vertical, 5)
             }
-            .padding()
         }
     }
 }
@@ -264,7 +271,7 @@ class ImageListViewModel: ObservableObject {
         let csvData = EmailManager.shared.generateCSVData(for: images, users: users, facilityName: facility.facilityName)
         EmailManager.shared.sendEmail(csvData: csvData, facilityName: facility.facilityName, presentingViewController: presentingViewController)
     }
-
+    
 }
 
 struct ImageListView_Previews: PreviewProvider {

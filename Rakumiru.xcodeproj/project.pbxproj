@@ -49,6 +49,7 @@
 		AAA9F50E2C14B2060075D3DF /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA9F50D2C14B2060075D3DF /* Color.swift */; };
 		AAA9F5102C14CA940075D3DF /* ImageListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA9F50F2C14CA940075D3DF /* ImageListViewModel.swift */; };
 		AAA9F5132C14DF8B0075D3DF /* EmailManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA9F5122C14DF8B0075D3DF /* EmailManager.swift */; };
+		AAA9F5152C1540CF0075D3DF /* UserDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA9F5142C1540CF0075D3DF /* UserDetailView.swift */; };
 		AAC3B0562C142AF700FE6A3D /* Meals.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B0552C142AF700FE6A3D /* Meals.swift */; };
 		AAC3B0582C142B3700FE6A3D /* GPT4oRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B0572C142B3700FE6A3D /* GPT4oRequest.swift */; };
 		AAC3B05A2C142BA500FE6A3D /* SingleAnalyzeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B0592C142BA500FE6A3D /* SingleAnalyzeView.swift */; };
@@ -111,6 +112,7 @@
 		AAA9F50D2C14B2060075D3DF /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		AAA9F50F2C14CA940075D3DF /* ImageListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageListViewModel.swift; sourceTree = "<group>"; };
 		AAA9F5122C14DF8B0075D3DF /* EmailManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailManager.swift; sourceTree = "<group>"; };
+		AAA9F5142C1540CF0075D3DF /* UserDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDetailView.swift; sourceTree = "<group>"; };
 		AAC3B0552C142AF700FE6A3D /* Meals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meals.swift; sourceTree = "<group>"; };
 		AAC3B0572C142B3700FE6A3D /* GPT4oRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPT4oRequest.swift; sourceTree = "<group>"; };
 		AAC3B0592C142BA500FE6A3D /* SingleAnalyzeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleAnalyzeView.swift; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 				AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */,
 				AAA9F4FD2C14A1D70075D3DF /* UserRegistrationView.swift */,
 				AAA9F50B2C14B0110075D3DF /* ImageListView.swift */,
+				AAA9F5142C1540CF0075D3DF /* UserDetailView.swift */,
 			);
 			path = Pages;
 			sourceTree = "<group>";
@@ -473,6 +476,7 @@
 				AAC3B0632C143A9600FE6A3D /* CameraView.swift in Sources */,
 				AAA9F4FE2C14A1D70075D3DF /* UserRegistrationView.swift in Sources */,
 				AA04D1B82C0D826800BC3335 /* Persistence.swift in Sources */,
+				AAA9F5152C1540CF0075D3DF /* UserDetailView.swift in Sources */,
 				AA04D20D2C0DC49300BC3335 /* Settings.swift in Sources */,
 				AA04D1BB2C0D826800BC3335 /* Rakumiru.xcdatamodeld in Sources */,
 				AA04D1F52C0DB91B00BC3335 /* FirebaseManager.swift in Sources */,
