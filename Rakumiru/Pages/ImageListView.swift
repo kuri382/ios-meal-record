@@ -1,174 +1,270 @@
 import SwiftUI
-import FirebaseDatabaseInternal
+
+import SwiftUI
 
 struct ImageListView: View {
-    @State private var selectedFacility: Facility?
+    @StateObject private var viewModel = ImageListViewModel()
     @State private var selectedDate: Date = Date()
-    @State private var facilities: [Facility] = []
-    @State private var users: [User] = []
-    @State private var images: [String: [URL]] = [:]
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-
+    
     var body: some View {
         VStack {
-            if facilities.isEmpty {
-                ProgressView("Loading facilities...")
-                    .onAppear(perform: fetchFacilities)
+            if viewModel.facilities.isEmpty {
+                ProgressView("Loading...")
+                    .onAppear {
+                        viewModel.fetchFacilities()
+                    }
             } else {
-                Picker("Select Facility", selection: $selectedFacility) {
-                    ForEach(facilities) { facility in
+                Picker("施設選択", selection: $viewModel.selectedFacility) {
+                    ForEach(viewModel.facilities) { facility in
                         Text(facility.facilityName).tag(facility as Facility?)
                     }
                 }
                 .pickerStyle(MenuPickerStyle())
-                .padding()
-                .onChange(of: selectedFacility) { _ in
-                    fetchUsers()
+                .onChange(of: viewModel.selectedFacility) { newFacility in
+                    if let facility = newFacility {
+                        viewModel.fetchUsers(for: facility)
+                    }
                 }
                 
-                DatePicker("Select Date", selection: $selectedDate, displayedComponents: .date)
+                DatePicker("日付選択", selection: $selectedDate, displayedComponents: .date)
                     .padding()
                     .onChange(of: selectedDate) { _ in
-                        fetchImages()
+                        viewModel.fetchImages(for: selectedDate)
                     }
-
-                if isLoading {
+                
+                if viewModel.isLoading {
                     ProgressView("Loading data...")
-                } else if let errorMessage = errorMessage {
+                } else if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
                         .padding()
                 } else {
-                    List(users) { user in
-                        VStack(alignment: .leading) {
-                            Text(user.userName)
-                                .font(.headline)
-                            if let userImages = images[user.id], !userImages.isEmpty {
-                                ForEach(userImages, id: \.self) { imageUrl in
-                                    HStack {
-                                        AsyncImage(url: imageUrl) { phase in
-                                            if let image = phase.image {
-                                                image.resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 100, height: 100)
-                                                    .clipped()
-                                            } else if phase.error != nil {
-                                                Color.red
-                                                    .frame(width: 100, height: 100)
-                                            } else {
-                                                Color.gray
-                                                    .frame(width: 100, height: 100)
-                                            }
-                                        }
-                                        Text("Submitted at: \(selectedDate.formatted(date: .numeric, time: .omitted))")
-                                    }
-                                }
-                            } else {
-                                Text("No images available for selected date.")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                        .padding()
+                    UserListView(users: $viewModel.users, images: $viewModel.images, selectedDate: selectedDate)
+                }
+                
+                Button(action: {
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let rootViewController = windowScene.windows.first?.rootViewController {
+                        viewModel.sendEmail(selectedDate: selectedDate, presentingViewController: rootViewController)
                     }
+                }) {
+                    Text("メール送信")
+                }
+                .padding()
+            }
+        }
+    }
+}
+
+struct UserListView: View {
+    @Binding var users: [User]
+    @Binding var images: [String: [ImageData]]
+    var selectedDate: Date
+    
+    var body: some View {
+        List(users) { user in
+            VStack(alignment: .leading) {
+                Text(user.userName)
+                    .font(.headline)
+                if let userImages = images[user.id], !userImages.isEmpty {
+                    ForEach(userImages) { image in
+                        ImageView(image: image)
+                    }
+                } else {
+                    Text("記録情報がありません")
+                        .foregroundColor(.gray)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+struct ImageView: View {
+    var image: ImageData
+    
+    var formattedDate: String {
+        let date = Date(timeIntervalSince1970: image.submittedAt / 1000)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd HH:mm"
+        return formatter.string(from: date)
+    }
+    
+    var stapleAverage: Double {
+        let staples = image.meals?.filter { $0.label == "staple" } ?? []
+        let totalRemaining = staples.reduce(0.0) { $0 + $1.remaining }
+        return staples.isEmpty ? 0.0 : (totalRemaining / Double(staples.count)) * 100
+    }
+    
+    var sideAverage: Double {
+        let sides = image.meals?.filter { $0.label == "side" } ?? []
+        let totalRemaining = sides.reduce(0.0) { $0 + $1.remaining }
+        return sides.isEmpty ? 0.0 : (totalRemaining / Double(sides.count)) * 100
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                AsyncImage(url: URL(string: image.imageUrl)) { phase in
+                    if let image = phase.image {
+                        image.resizable()
+                            .scaledToFill()
+                            .frame(width: 100, height: 100)
+                            .clipped()
+                            .rotationEffect(.degrees(-90))
+                            .cornerRadius(10)
+                    } else if phase.error != nil {
+                        Color.red
+                            .frame(width: 100, height: 100)
+                    } else {
+                        Color.gray
+                            .frame(width: 100, height: 100)
+                    }
+                }
+                Text("記録時刻: \(formattedDate)")
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let meals = image.meals {
+                Text("主菜の残食率: \(String(format: "%.0f", stapleAverage))%")
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .bold()
+                ProgressView(value: stapleAverage, total: 100)
+                    .progressViewStyle(LinearProgressViewStyle(tint: .red))
+                    .frame(height: 10)
+                    .padding(.bottom, 10)
+                Text("副菜の残食率: \(String(format: "%.0f", sideAverage))%")
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .bold()
+                ProgressView(value: sideAverage, total: 100)
+                    .progressViewStyle(LinearProgressViewStyle(tint: .red))
+                    .frame(height: 10)
+                    .padding(.bottom, 10)
+                Divider()
+                ForEach(meals) { meal in
+                    Text("\(meal.name): \(meal.weight)g (\(meal.label == "staple" ? "主菜" : (meal.label == "side" ? "副菜" : meal.label)), \(Int(meal.remaining * 100))%)")
+                        .font(.subheadline)
                 }
             }
         }
-        .padding()
+        .padding(.vertical, 5)
     }
+}
+
+class ImageListViewModel: ObservableObject {
+    @Published var selectedFacility: Facility?
+    @Published var facilities: [Facility] = []
+    @Published var users: [User] = []
+    @Published var images: [String: [ImageData]] = [:]
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    @Published var latestImages: [ImageData] = []
     
     func fetchFacilities() {
         isLoading = true
         FirebaseManager.shared.fetchFacilities { result in
-            isLoading = false
-            switch result {
-            case .success(let facilities):
-                self.facilities = facilities
-                if let latestFacility = facilities.sorted(by: { $0.submittedAt > $1.submittedAt }).first {
-                    self.selectedFacility = latestFacility
-                    self.fetchUsers()
+            DispatchQueue.main.async {
+                self.isLoading = false
+                switch result {
+                case .success(let facilities):
+                    self.facilities = facilities
+                    if let firstFacility = facilities.first {
+                        self.selectedFacility = firstFacility
+                        self.fetchUsers(for: firstFacility)
+                    } else {
+                        self.errorMessage = "No facilities found."
+                    }
+                case .failure(let error):
+                    self.errorMessage = "Failed to load facilities: \(error.localizedDescription)"
                 }
-            case .failure(let error):
-                self.errorMessage = "Failed to load facilities: \(error.localizedDescription)"
             }
         }
     }
     
-    func fetchUsers() {
-        guard let facility = selectedFacility else {
-            errorMessage = "Please select a facility."
-            return
-        }
-        
+    func fetchUsers(for facility: Facility) {
         isLoading = true
-        FirebaseManager.shared.db.child("users").queryOrdered(byChild: "facility_id").queryEqual(toValue: facility.id).observeSingleEvent(of: .value) { snapshot in
-            var users: [User] = []
-            for child in snapshot.children {
-                if let childSnapshot = child as? DataSnapshot,
-                   let userData = childSnapshot.value as? [String: Any],
-                   let userName = userData["user_name"] as? String,
-                   let userNumber = userData["user_number"] as? String,
-                   let facilityId = userData["facility_id"] as? String,
-                   let submittedAt = userData["submitted_at"] as? Double {
-                    let user = User(id: childSnapshot.key, userName: userName, userNumber: userNumber, submittedAt: submittedAt, facilityId: facilityId)
-                    users.append(user)
+        print("Fetching users for facility: \(facility.facilityName)") // デバッグログ
+        FirebaseManager.shared.fetchUsers(for: facility.id) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                switch result {
+                case .success(let users):
+                    print("Users fetched: \(users)") // デバッグログ
+                    self.users = users
+                    self.errorMessage = nil // エラーメッセージをクリア
+                    self.fetchImages(for: Date()) // ユーザーのフェッチ後に画像をフェッチ
+                case .failure(let error):
+                    self.errorMessage = "Failed to load users: \(error.localizedDescription)"
+                    print("Error fetching users: \(error.localizedDescription)") // デバッグログ
                 }
             }
-            self.users = users
-            self.fetchImages()
-            isLoading = false
-        } withCancel: { error in
-            self.errorMessage = "Failed to load users: \(error.localizedDescription)"
-            isLoading = false
         }
     }
     
-    func fetchImages() {
-        guard let facility = selectedFacility else {
-            errorMessage = "Please select a facility."
+    func fetchImages(for date: Date) {
+        guard !users.isEmpty else {
+            errorMessage = "No users found."
             return
         }
         
         isLoading = true
         images = [:]
         
+        let group = DispatchGroup()
+        
         for user in users {
-            FirebaseManager.shared.db.child("users").child(user.id).child("images").observeSingleEvent(of: .value) { snapshot in
-                var userImages: [URL] = []
-                let group = DispatchGroup()
-                
-                for child in snapshot.children {
-                    if let childSnapshot = child as? DataSnapshot,
-                       let imageData = childSnapshot.value as? [String: Any],
-                       let imagePath = imageData["image_url"] as? String,
-                       let submittedAt = imageData["submitted_at"] as? Double {
-                        let imageDate = Date(timeIntervalSince1970: submittedAt)
+            group.enter()
+            FirebaseManager.shared.fetchImages(for: user.id) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let userImages):
                         let calendar = Calendar.current
-                        if calendar.isDate(imageDate, inSameDayAs: selectedDate) {
-                            group.enter()
-                            FirebaseManager.shared.fetchImageURL(imagePath: imagePath) { result in
-                                switch result {
-                                case .success(let url):
-                                    userImages.append(url)
-                                case .failure(let error):
-                                    print("Failed to fetch image URL: \(error)")
-                                }
-                                group.leave()
-                            }
+                        let filteredImages = userImages.filter {
+                            calendar.isDate(Date(timeIntervalSince1970: $0.submittedAt / 1000), inSameDayAs: date)
                         }
+                        let latestImage = filteredImages.sorted(by: { $0.submittedAt > $1.submittedAt }).first
+                        self.images[user.id] = latestImage != nil ? [latestImage!] : []
+                    case .failure(let error):
+                        self.errorMessage = "Failed to load images: \(error.localizedDescription)"
                     }
+                    group.leave()
                 }
-                
-                group.notify(queue: .main) {
-                    self.images[user.id] = userImages
-                    isLoading = false
-                }
-            } withCancel: { error in
-                self.errorMessage = "Failed to load images: \(error.localizedDescription)"
-                isLoading = false
             }
         }
+        
+        group.notify(queue: .main) {
+            self.isLoading = false
+        }
     }
+    
+    
+    func filterLatestImages(for date: Date) {
+        var latestImages: [ImageData] = []
+        let calendar = Calendar.current
+        
+        for userImages in images.values {
+            if let latestImage = userImages.filter({ calendar.isDate(Date(timeIntervalSince1970: $0.submittedAt / 1000), inSameDayAs: date) })
+                .sorted(by: { $0.submittedAt > $1.submittedAt })
+                .first {
+                latestImages.append(latestImage)
+            }
+        }
+        
+        self.latestImages = latestImages
+    }
+    
+    func sendEmail(selectedDate: Date, presentingViewController: UIViewController) {
+        guard let facility = selectedFacility else {
+            errorMessage = "Facility not selected."
+            return
+        }
+        
+        let csvData = EmailManager.shared.generateCSVData(for: images, users: users, facilityName: facility.facilityName)
+        EmailManager.shared.sendEmail(csvData: csvData, facilityName: facility.facilityName, presentingViewController: presentingViewController)
+    }
+
 }
 
 struct ImageListView_Previews: PreviewProvider {

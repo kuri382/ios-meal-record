@@ -27,4 +27,5 @@ struct ImageData: Identifiable {
     var id: String
     var imageUrl: String
     var submittedAt: Double // TimestampからDoubleに変更
+    var meals: [Meal]?
 }

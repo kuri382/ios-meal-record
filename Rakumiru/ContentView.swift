@@ -67,7 +67,7 @@ struct NavigationCardView<Destination: View>: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.title2)
-                    .foregroundColor(Color("262260"))
+                    .foregroundColor(Color(hex: "262260"))
             }
             .padding()
             .background(Color(.secondarySystemBackground))

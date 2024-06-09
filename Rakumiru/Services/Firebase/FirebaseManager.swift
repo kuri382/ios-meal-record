@@ -10,7 +10,8 @@ class FirebaseManager {
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()
         }
-        db = Database.database(url: "https://tabemiru-dev-default-rtdb.asia-southeast1.firebasedatabase.app").reference()
+        let databaseUrl = Config.FirebaseDbUrl
+        db = Database.database(url: databaseUrl).reference()
     }
     
     let storage = Storage.storage()
@@ -47,6 +48,29 @@ class FirebaseManager {
             }
         }
     }
+    
+    func fetchUsers(for facilityId: String, completion: @escaping (Result<[User], Error>) -> Void) {
+        db.child("users").queryOrdered(byChild: "facility_id").queryEqual(toValue: facilityId).observeSingleEvent(of: .value) { snapshot in
+            var users: [User] = []
+            for child in snapshot.children {
+                if let childSnapshot = child as? DataSnapshot,
+                   let userData = childSnapshot.value as? [String: Any],
+                   let userName = userData["user_name"] as? String,
+                   let userNumber = userData["user_number"] as? String,
+                   let facilityId = userData["facility_id"] as? String,
+                   let submittedAt = userData["submitted_at"] as? Double {
+                    let user = User(id: childSnapshot.key, userName: userName, userNumber: userNumber, submittedAt: submittedAt, facilityId: facilityId)
+                    users.append(user)
+                }
+            }
+            print("Fetched users: \(users)") // デバッグログ
+            completion(.success(users))
+        } withCancel: { error in
+            print("Error fetching users: \(error.localizedDescription)") // デバッグログ
+            completion(.failure(error))
+        }
+    }
+
     
     func uploadImage(_ image: UIImage, completion: @escaping (Result<URL, Error>) -> Void) {
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -94,6 +118,7 @@ class FirebaseManager {
     
     func fetchFacilities(completion: @escaping (Result<[Facility], Error>) -> Void) {
         db.child("facilities").observeSingleEvent(of: .value) { snapshot in
+            print("Snapshot received: \(snapshot)") // デバッグログ
             var facilities: [Facility] = []
             for child in snapshot.children {
                 if let childSnapshot = child as? DataSnapshot,
@@ -104,11 +129,15 @@ class FirebaseManager {
                     facilities.append(facility)
                 }
             }
+            print("Facilities parsed: \(facilities)") // デバッグログ
             completion(.success(facilities))
         } withCancel: { error in
+            print("Error receiving snapshot: \(error.localizedDescription)") // デバッグログ
             completion(.failure(error))
         }
     }
+
+    
     func fetchImages(for userId: String, completion: @escaping (Result<[ImageData], Error>) -> Void) {
         db.child("users").child(userId).child("images").observeSingleEvent(of: .value) { snapshot in
             var images: [ImageData] = []
@@ -117,15 +146,35 @@ class FirebaseManager {
                    let imageData = childSnapshot.value as? [String: Any],
                    let imageUrl = imageData["image_url"] as? String,
                    let submittedAt = imageData["submitted_at"] as? Double {
-                    let image = ImageData(id: childSnapshot.key, imageUrl: imageUrl, submittedAt: submittedAt)
+                    
+                    var meals: [Meal]? = nil
+                    if let mealsData = imageData["meals"] as? [[String: Any]] {
+                        meals = mealsData.compactMap { dict -> Meal? in
+                            guard let label = dict["label"] as? String,
+                                  let name = dict["name"] as? String,
+                                  let nutrients = dict["nutrients"] as? String,
+                                  let remaining = dict["remaining"] as? Double,
+                                  let weight = dict["weight"] as? Int else {
+                                return nil
+                            }
+                            return Meal(name: name, nutrients: nutrients, weight: Int64(weight), label: label, remaining: remaining)
+                        }
+                    }
+                    
+                    let image = ImageData(id: childSnapshot.key, imageUrl: imageUrl, submittedAt: submittedAt, meals: meals)
                     images.append(image)
                 }
             }
+            print("Fetched images: \(images)") // デバッグログ
             completion(.success(images))
         } withCancel: { error in
+            print("Error fetching images: \(error.localizedDescription)") // デバッグログ
             completion(.failure(error))
         }
     }
+
+
+
     
     func fetchImageURL(imagePath: String, completion: @escaping (Result<URL, Error>) -> Void) {
         let storageRef = storage.reference(withPath: imagePath)
@@ -137,4 +186,25 @@ class FirebaseManager {
             }
         }
     }
+    
+    func saveMealData(userId: String, imageUrl: URL, mealsData: MealsData, completion: @escaping (Result<Void, Error>) -> Void) {
+        let imageRef = db.child("users").child(userId).child("images").queryOrdered(byChild: "image_url").queryEqual(toValue: imageUrl.absoluteString)
+        imageRef.observeSingleEvent(of: .value) { snapshot in
+            guard let imageSnapshot = snapshot.children.allObjects.first as? DataSnapshot else {
+                completion(.failure(NSError(domain: "Image not found", code: -1, userInfo: nil)))
+                return
+            }
+            
+            let mealsRef = imageSnapshot.ref.child("meals")
+            let mealsArray = mealsData.meals.map { try! JSONSerialization.jsonObject(with: JSONEncoder().encode($0)) as! [String: Any] }
+            mealsRef.setValue(mealsArray) { error, _ in
+                if let error = error {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
+            }
+        }
+    }
+    
 }

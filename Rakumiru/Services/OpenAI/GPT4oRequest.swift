@@ -1,3 +1,10 @@
+//
+//  GPT4Service.swift
+//  Rakumiru
+//
+//  Created by tetsu.kuribayashi on 2024/06/08.
+//
+
 import Foundation
 
 class GPT4Service {
@@ -12,7 +19,7 @@ class GPT4Service {
         let openAIApiKey = Config.OpenAIApiKey
         request.setValue("Bearer \(openAIApiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let json: [String: Any] = [
             "model": "gpt-4o",
             "messages": [

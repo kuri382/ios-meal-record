@@ -9,16 +9,8 @@ import Foundation
 
 class QRCodeScanner {
     static func decodeQRCode(from string: String) -> UserQRCode? {
-        if let data = string.data(using: .utf8) {
-            let decoder = JSONDecoder()
-            do {
-                let userQRCode = try decoder.decode(UserQRCode.self, from: data)
-                return userQRCode
-            } catch {
-                print("Failed to decode QR code data: \(error)")
-                return nil
-            }
-        }
-        return nil
+        guard let data = string.data(using: .utf8) else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode(UserQRCode.self, from: data)
     }
 }
