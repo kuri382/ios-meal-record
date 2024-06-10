@@ -56,6 +56,8 @@ struct ImageListView: View {
     }
 }
 
+import SwiftUI
+
 struct UserListView: View {
     @Binding var users: [User]
     @Binding var images: [String: [ImageData]]
@@ -63,29 +65,23 @@ struct UserListView: View {
     
     var body: some View {
         List(users) { user in
-            if let userImages = images[user.id], !userImages.isEmpty {
-                NavigationLink(destination: UserDetailView(user: user, userImages: userImages)) {
-                    VStack(alignment: .leading) {
-                        Text("\(user.userName)さん")
-                            .font(.headline)
-                        if let firstImage = userImages.first {
-                            ImageView(image: firstImage)
-                        }
-                    }
-                    .padding(.vertical, 5)
-                }
-            } else {
+            NavigationLink(destination: UserDetailView(userId: user.id, userName: user.userName)) {
                 VStack(alignment: .leading) {
-                    Text(user.userName)
+                    Text("\(user.userName)さん")
                         .font(.headline)
-                    Text("No images available for selected date.")
-                        .foregroundColor(.gray)
+                    if let userImages = images[user.id], let firstImage = userImages.first {
+                        ImageView(image: firstImage)
+                    } else {
+                        Text("No images available for selected date.")
+                            .foregroundColor(.gray)
+                    }
                 }
                 .padding(.vertical, 5)
             }
         }
     }
 }
+
 
 struct ImageView: View {
     var image: ImageData
@@ -111,6 +107,9 @@ struct ImageView: View {
     
     var body: some View {
         VStack(alignment: .leading) {
+            Text("記録時刻: \(formattedDate)")
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
             HStack {
                 AsyncImage(url: URL(string: image.imageUrl)) { phase in
                     if let image = phase.image {
@@ -128,10 +127,8 @@ struct ImageView: View {
                             .frame(width: 100, height: 100)
                     }
                 }
-                Text("記録時刻: \(formattedDate)")
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.bottom, 10)
             if let meals = image.meals {
                 Text("主菜の残食率: \(String(format: "%.0f", stapleAverage))%")
                     .font(.subheadline)
@@ -192,19 +189,16 @@ class ImageListViewModel: ObservableObject {
     
     func fetchUsers(for facility: Facility) {
         isLoading = true
-        print("Fetching users for facility: \(facility.facilityName)") // デバッグログ
         FirebaseManager.shared.fetchUsers(for: facility.id) { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 switch result {
                 case .success(let users):
-                    print("Users fetched: \(users)") // デバッグログ
                     self.users = users
                     self.errorMessage = nil // エラーメッセージをクリア
                     self.fetchImages(for: Date()) // ユーザーのフェッチ後に画像をフェッチ
                 case .failure(let error):
                     self.errorMessage = "Failed to load users: \(error.localizedDescription)"
-                    print("Error fetching users: \(error.localizedDescription)") // デバッグログ
                 }
             }
         }

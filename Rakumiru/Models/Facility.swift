@@ -15,11 +15,11 @@ struct Facility: Identifiable, Hashable {
     }
 }
 
-struct User: Identifiable {
+struct User: Identifiable, Decodable {
     var id: String
     var userName: String
     var userNumber: String
-    var submittedAt: Double // TimestampからDoubleに変更
+    var submittedAt: Double
     var facilityId: String
 }
 

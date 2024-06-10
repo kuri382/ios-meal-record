@@ -63,7 +63,6 @@ class FirebaseManager {
                     users.append(user)
                 }
             }
-            print("Fetched users: \(users)") // デバッグログ
             completion(.success(users))
         } withCancel: { error in
             print("Error fetching users: \(error.localizedDescription)") // デバッグログ
@@ -118,7 +117,6 @@ class FirebaseManager {
     
     func fetchFacilities(completion: @escaping (Result<[Facility], Error>) -> Void) {
         db.child("facilities").observeSingleEvent(of: .value) { snapshot in
-            print("Snapshot received: \(snapshot)") // デバッグログ
             var facilities: [Facility] = []
             for child in snapshot.children {
                 if let childSnapshot = child as? DataSnapshot,
@@ -129,10 +127,8 @@ class FirebaseManager {
                     facilities.append(facility)
                 }
             }
-            print("Facilities parsed: \(facilities)") // デバッグログ
             completion(.success(facilities))
         } withCancel: { error in
-            print("Error receiving snapshot: \(error.localizedDescription)") // デバッグログ
             completion(.failure(error))
         }
     }
@@ -165,17 +161,32 @@ class FirebaseManager {
                     images.append(image)
                 }
             }
-            print("Fetched images: \(images)") // デバッグログ
             completion(.success(images))
         } withCancel: { error in
             print("Error fetching images: \(error.localizedDescription)") // デバッグログ
             completion(.failure(error))
         }
     }
-
-
-
     
+    func fetchUser(by userId: String, completion: @escaping (Result<User, Error>) -> Void) {
+            let ref = Database.database().reference().child("users").child(userId)
+            ref.observeSingleEvent(of: .value) { snapshot in
+                guard let value = snapshot.value as? [String: Any] else {
+                    print("User not found for userId: \(userId)")
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not found"])))
+                    return
+                }
+                do {
+                    let data = try JSONSerialization.data(withJSONObject: value)
+                    let user = try JSONDecoder().decode(User.self, from: data)
+                    completion(.success(user))
+                } catch {
+                    print("Error decoding user data: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+
     func fetchImageURL(imagePath: String, completion: @escaping (Result<URL, Error>) -> Void) {
         let storageRef = storage.reference(withPath: imagePath)
         storageRef.downloadURL { url, error in
@@ -205,6 +216,29 @@ class FirebaseManager {
                 }
             }
         }
+    }
+    
+    func saveMealDataWithRetry(userId: String, imageUrl: URL, mealsData: MealsData, maxRetries: Int = 3, completion: @escaping (Result<Void, Error>) -> Void) {
+        var retries = 0
+        
+        func attemptSave() {
+            saveMealData(userId: userId, imageUrl: imageUrl, mealsData: mealsData) { result in
+                switch result {
+                case .success:
+                    completion(.success(()))
+                case .failure(let error):
+                    if retries < maxRetries {
+                        retries += 1
+                        print("Retry \(retries) for saving meal data...")
+                        attemptSave()
+                    } else {
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+        
+        attemptSave()
     }
     
 }

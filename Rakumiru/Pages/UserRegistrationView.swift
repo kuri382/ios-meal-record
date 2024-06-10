@@ -9,12 +9,12 @@ struct UserRegistrationView: View {
     @State private var errorMessage: String?
 
     var body: some View {
-        VStack {
+        VStack(spacing: 20) {
             if facilities.isEmpty {
-                ProgressView("Loading facilities...")
+                ProgressView("施設読み込み中...")
                     .onAppear(perform: fetchFacilities)
             } else {
-                Picker("Select Facility", selection: $selectedFacility) {
+                Picker("施設を選択してください", selection: $selectedFacility) {
                     ForEach(facilities) { facility in
                         Text(facility.facilityName).tag(facility as Facility?)
                     }
@@ -22,36 +22,50 @@ struct UserRegistrationView: View {
                 .pickerStyle(MenuPickerStyle())
                 .padding()
 
-                TextField("User Name", text: $userName)
+                TextField("利用者様氏名を入力してください", text: $userName)
+                    .font(.title2)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .padding()
+                    .frame(height: 50)
 
                 Button(action: registerUser) {
-                    Text("Register User")
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                    HStack {
+                        Image(systemName: "person.badge.plus")
+                            .font(.title2)
+                        Text("登録する")
+                            .font(.title2)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
                 }
-                .padding()
+                .disabled(isLoading)
+                .padding(.horizontal)
 
                 if let successMessage = successMessage {
                     Text(successMessage)
                         .foregroundColor(.green)
-                        .padding()
+                        .padding(.horizontal)
                 }
 
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
-                        .padding()
+                        .padding(.horizontal)
                 }
 
                 if isLoading {
-                    ProgressView("Registering...")
+                    ProgressView("登録中...")
+                        .padding(.horizontal)
                 }
             }
         }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
         .padding()
         .onAppear {
             fetchFacilities()
@@ -84,7 +98,6 @@ struct UserRegistrationView: View {
         errorMessage = nil
         successMessage = nil
 
-        // 自動でユーザー番号を設定（施設内のユーザー数 + 1）
         FirebaseManager.shared.db.child("users").child(facility.id).observeSingleEvent(of: .value) { snapshot in
             let userCount = snapshot.childrenCount
             let userNumber = String(userCount + 1)
@@ -92,8 +105,8 @@ struct UserRegistrationView: View {
             FirebaseManager.shared.createUser(userName: userName, userNumber: userNumber, facilityId: facility.id) { result in
                 isLoading = false
                 switch result {
-                case .success(let userId):
-                    successMessage = "User registered with ID: \(userId)"
+                case .success(_):
+                    successMessage = "\(userName)を登録しました"
                     userName = "" // Clear the text field on success
                 case .failure(let error):
                     errorMessage = "Failed to register user: \(error.localizedDescription)"
@@ -105,3 +118,11 @@ struct UserRegistrationView: View {
         }
     }
 }
+
+/*
+ struct UserRegistrationView_Previews: PreviewProvider {
+ static var previews: some View {
+ UserRegistrationView()
+ }
+ }
+ */

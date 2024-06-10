@@ -8,33 +8,67 @@ struct SingleAnalyzeView: View {
     @State private var responseText: String?
     @State private var meals: [Meal] = []
     
+    @State private var magnification: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    
     var body: some View {
         VStack {
+            Spacer()
+            
             if let image = selectedImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 200)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geometry.size.width * 0.8, height: geometry.size.width * 0.8)
+                        .scaleEffect(magnification)
+                        .offset(x: offset.width, y: offset.height)
+                        .gesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    magnification = value
+                                }
+                                .simultaneously(with: DragGesture()
+                                    .onChanged { value in
+                                        offset = value.translation
+                                    }
+                                    .onEnded { value in
+                                        lastOffset.width += value.translation.width
+                                        lastOffset.height += value.translation.height
+                                        offset = lastOffset
+                                    }
+                                )
+                        )
+                        .frame(width: geometry.size.width, height: geometry.size.height * 0.8, alignment: .center) // 中央寄せに調整
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .frame(width: 400)
             }
             
             if selectedImage == nil {
                 Button(action: {
                     isImagePickerPresented = true
                 }) {
-                    Text("画像を選択")
-                        .font(.title)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                    HStack {
+                        Image(systemName: "folder")
+                            .font(.title2)
+                        Text("写真を選択する")
+                            .font(.title2)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemBackground))
+                    .foregroundColor(Color(hex: "262260"))
+                    .cornerRadius(10)
+                    .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
                 }
                 .padding()
                 .disabled(isLoading)
             }
             
-            if selectedImage != nil {
+            if selectedImage != nil && meals.isEmpty {
                 Button(action: {
                     uploadImage()
                 }) {
@@ -43,20 +77,26 @@ struct SingleAnalyzeView: View {
                             .progressViewStyle(CircularProgressViewStyle())
                             .padding()
                     } else {
-                        Text("画像を送る")
-                            .font(.title)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                        HStack {
+                            Image(systemName: "fork.knife")
+                                .font(.title2)
+                            Text("食事を分析する")
+                                .font(.title2)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color(.secondarySystemBackground))
+                        .foregroundColor(Color(hex: "262260"))
+                        .cornerRadius(10)
+                        .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
                     }
                 }
                 .padding()
                 .disabled(isLoading)
             }
+            
             if meals.isEmpty {
-                Text("No meals data")
+                Text("")
             } else {
                 List(meals) { meal in
                     VStack(alignment: .leading) {
@@ -65,9 +105,7 @@ struct SingleAnalyzeView: View {
                         Text("残量: \(Int(meal.remaining * 100))%")
                         Text("栄養素: \(meal.nutrients)")
                         Text("重量: \(meal.weight)")
-                        //Text("ラベル: \(meal.label)")
                         Text("ラベル: \(meal.label == "staple" ? "主菜" : (meal.label == "side" ? "副菜" : meal.label))")
-
                     }
                 }
             }
@@ -78,11 +116,13 @@ struct SingleAnalyzeView: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .cornerRadius(10)
-                        .frame(maxWidth: .infinity, maxHeight: 500) // 表示範囲を指定
+                        .frame(maxWidth: .infinity, maxHeight: 600) // 表示範囲を指定
                 }
-                .frame(maxWidth: .infinity, maxHeight: 500) // スクロールビューのサイズを指定
+                .frame(maxWidth: .infinity, maxHeight: 600) // スクロールビューのサイズを指定
                 .padding()
             }
+            
+            Spacer()
         }
         .padding()
         .sheet(isPresented: $isImagePickerPresented) {
@@ -129,7 +169,6 @@ struct SingleAnalyzeView: View {
                 self.isLoading = false
                 switch gptResult {
                 case .success(let responseString):
-                    //print("Response String: \(responseString)")
                     if let data = responseString.data(using: .utf8) {
                         do {
                             let gptResponse = try JSONDecoder().decode(GPT4oResponse.self, from: data)

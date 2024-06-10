@@ -65,6 +65,8 @@
 		AAC3B06D2C149E3F00FE6A3D /* FacilityRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */; };
 		AAC3B06E2C149E3F00FE6A3D /* FacilityRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */; };
 		AAC3B06F2C149E3F00FE6A3D /* FacilityRegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */; };
+		AAE073722C15EA3D008C65D6 /* MealCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE073712C15EA3D008C65D6 /* MealCharts.swift */; };
+		AAE073742C15EA64008C65D6 /* NutrientCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE073732C15EA64008C65D6 /* NutrientCharts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -121,6 +123,8 @@
 		AAC3B0622C143A9600FE6A3D /* CameraView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
 		AAC3B0682C149CA100FE6A3D /* Facility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Facility.swift; sourceTree = "<group>"; };
 		AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacilityRegistrationView.swift; sourceTree = "<group>"; };
+		AAE073712C15EA3D008C65D6 /* MealCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealCharts.swift; sourceTree = "<group>"; };
+		AAE073732C15EA64008C65D6 /* NutrientCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutrientCharts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -232,6 +236,7 @@
 		AA04D1DF2C0D84AF00BC3335 /* Pages */ = {
 			isa = PBXGroup;
 			children = (
+				AAE073752C15EA77008C65D6 /* ResultCharts */,
 				AAC3B0592C142BA500FE6A3D /* SingleAnalyzeView.swift */,
 				AAC3B05B2C14373A00FE6A3D /* ContinuousAnalyzeView.swift */,
 				AAC3B06C2C149E3F00FE6A3D /* FacilityRegistrationView.swift */,
@@ -315,6 +320,15 @@
 				AAA9F5092C14ADF50075D3DF /* QRCodeScanner.swift */,
 			);
 			path = Camera;
+			sourceTree = "<group>";
+		};
+		AAE073752C15EA77008C65D6 /* ResultCharts */ = {
+			isa = PBXGroup;
+			children = (
+				AAE073712C15EA3D008C65D6 /* MealCharts.swift */,
+				AAE073732C15EA64008C65D6 /* NutrientCharts.swift */,
+			);
+			path = ResultCharts;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -483,8 +497,10 @@
 				AAC3B06D2C149E3F00FE6A3D /* FacilityRegistrationView.swift in Sources */,
 				AAA9F50E2C14B2060075D3DF /* Color.swift in Sources */,
 				AAA9F50C2C14B0110075D3DF /* ImageListView.swift in Sources */,
+				AAE073742C15EA64008C65D6 /* NutrientCharts.swift in Sources */,
 				AAA9F5082C14ABC00075D3DF /* UserQRCode.swift in Sources */,
 				AA04D2122C0DCFFE00BC3335 /* ImageExtension.swift in Sources */,
+				AAE073722C15EA3D008C65D6 /* MealCharts.swift in Sources */,
 				AAA9F5132C14DF8B0075D3DF /* EmailManager.swift in Sources */,
 				AAA9F5102C14CA940075D3DF /* ImageListViewModel.swift in Sources */,
 				AA04D1B12C0D826500BC3335 /* ContentView.swift in Sources */,

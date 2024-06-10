@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AVFoundation
 
 struct ContinuousAnalyzeView: View {
     @State private var isCapturing = false
@@ -7,7 +8,8 @@ struct ContinuousAnalyzeView: View {
     @State private var isLoading = false
     @State private var responseText: String?
     @State private var currentUserId: String?
-
+    @State private var player: AVAudioPlayer?
+    
     var body: some View {
         VStack {
             if isCapturing {
@@ -20,39 +22,56 @@ struct ContinuousAnalyzeView: View {
                         .frame(width: 200, height: 300)
                 )
                 
-                Button("Stop Capturing") {
+                Button(action: {
                     stopCapturing()
+                }) {
+                    HStack {
+                        Image(systemName: "folder")
+                            .font(.title2)
+                        Text("読み取り終了")
+                            .font(.title2)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemBackground))
+                    .foregroundColor(Color(hex: "262260"))
+                    .cornerRadius(10)
+                    .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
+                    .frame(maxWidth: UIScreen.main.bounds.width * 0.8) // 親ビューの幅の80%に制限
                 }
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .foregroundColor(Color(hex: "262260"))
-                .cornerRadius(10)
-                .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
-                .padding(.horizontal)
             } else {
-                Button("Start Capturing") {
+                Button(action: {
                     startCapturing()
+                }) {
+                    HStack {
+                        Image(systemName: "fork.knife")
+                            .font(.title2)
+                        Text("読み取り開始")
+                            .font(.title2)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.secondarySystemBackground))
+                    .foregroundColor(Color(hex: "262260"))
+                    .cornerRadius(10)
+                    .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
+                    .frame(maxWidth: UIScreen.main.bounds.width * 0.8) // 親ビューの幅の80%に制限
                 }
-                .background(Color(.secondarySystemBackground))
-                .foregroundColor(Color(hex: "262260"))
-                .cornerRadius(10)
-                .shadow(color: Color(.systemGray4), radius: 5, x: 0, y: 2)
-                .padding(.horizontal)
             }
             /*
-            if isLoading {
-                ProgressView("Uploading Images...")
-            }
-            */
+             if isLoading {
+             ProgressView("Uploading Images...")
+             }
+             */
         }
         .onAppear {
-                    startCapturing()
-                }
+            startCapturing()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("QRCodeDetected"))) { notification in
             if let userInfo = notification.userInfo, let userId = userInfo["userId"] as? String {
                 self.currentUserId = userId
-                print("Received userId: \(userId)")
-                // 新しいユーザーIDを受け取ったら即座に画像を保存
+                //print("Received userId: \(userId)")
+                playSound()
                 self.uploadImages(for: userId)
             }
         }
@@ -111,7 +130,7 @@ struct ContinuousAnalyzeView: View {
         group.notify(queue: .main) {
             isLoading = false
             print("All images uploaded for user \(userId)")
-            capturedImages.removeAll() // 画像のアップロード後にリストをクリア
+            capturedImages.removeAll()
         }
     }
     
@@ -131,12 +150,12 @@ struct ContinuousAnalyzeView: View {
                                 let jsonString = String(content[jsonStartIndex..<jsonEndIndex])
                                 if let jsonData = jsonString.data(using: .utf8) {
                                     let mealsData = try JSONDecoder().decode(MealsData.self, from: jsonData)
-                                    FirebaseManager.shared.saveMealData(userId: userId, imageUrl: imageURL, mealsData: mealsData) { result in
+                                    FirebaseManager.shared.saveMealDataWithRetry(userId: userId, imageUrl: imageURL, mealsData: mealsData) { result in
                                         switch result {
                                         case .success:
                                             print("Meal data saved successfully for user \(userId)")
                                         case .failure(let error):
-                                            print("Failed to save meal data: \(error)")
+                                            print("Failed to save meal data after retries: \(error)")
                                         }
                                     }
                                 }
@@ -152,6 +171,24 @@ struct ContinuousAnalyzeView: View {
                     print(errorMessage)
                 }
             }
+        }
+    }
+
+    
+    func playSound() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Failed to set audio session category: \(error)")
+        }
+        
+        guard let url = Bundle.main.url(forResource: "beep", withExtension: "mp3") else { return }
+        do {
+            self.player = try AVAudioPlayer(contentsOf: url)
+            self.player?.play()
+        } catch {
+            print("Error playing sound: \(error)")
         }
     }
 }
